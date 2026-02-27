@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>聯絡簿產生器 - LIFE師專用版</title>
+    <style>
+        body {
+            font-family: "Microsoft JhengHei", sans-serif;
+            background-color: #f4f7f6;
+            margin: 0;
+            padding: 15px;
+            color: #333;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+        .container { display: flex; gap: 15px; width: 100%; max-width: 1600px; margin: 0 auto; box-sizing: border-box; flex: 1; }
+        
+        /* 上方分頁與功能列 */
+        .tabs-container { width: 100%; max-width: 1600px; margin: 0 auto 15px auto; display: flex; gap: 10px; border-bottom: 2px solid #bdc3c7; padding-bottom: 10px; align-items: center; flex-wrap: wrap; box-sizing: border-box; }
+        .tab-btn { padding: 8px 16px; background: #ecf0f1; border: 1px solid #bdc3c7; border-radius: 5px 5px 0 0; cursor: pointer; font-size: 1rem; margin-bottom: -12px; }
+        .tab-btn.active { background: #fff; border-bottom: 2px solid #fff; font-weight: bold; color: #2980b9; }
+        
+        .action-btn { padding: 6px 12px; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 0.9rem; }
+        .btn-green { background: #27ae60; } .btn-green:hover { background: #2ecc71; }
+        .btn-orange { background: #f39c12; } .btn-orange:hover { background: #f1c40f; }
+        .btn-red { background: #e74c3c; } .btn-red:hover { background: #c0392b; }
+        .btn-blue { background: #3498db; } .btn-blue:hover { background: #2980b9; }
+        
+        .export-group { margin-left: auto; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+        .export-btn { padding: 6px 12px; background: #34495e; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 0.9rem; }
+        .export-btn:hover { background: #2c3e50; }
+
+        /* 左側主面板 */
+        .main-panel { flex: 1; min-width: 0; background: #fff; padding: 15px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); display: flex; flex-direction: column; transition: all 0.3s ease; }
+        .header-section { display: flex; align-items: center; gap: 15px; margin-bottom: 15px; flex-wrap: wrap; }
+        .header-section input, .header-section select { font-size: 1rem; padding: 4px; }
+        .days-container { display: flex; gap: 10px; flex: 1; overflow-x: auto; }
+        .day-card { flex: 1 1 0; min-width: 180px; border: 1px solid #ccc; border-radius: 5px; padding: 10px; background-color: #fafafa; display: flex; flex-direction: column; }
+        .date-display { font-size: 0.95rem; font-weight: bold; color: #2c3e50; margin-bottom: 10px; padding-bottom: 5px; border-bottom: 1px solid #aaa; min-height: 22px; }
+        .holiday-mark { color: #e74c3c; font-size: 0.85rem; display: block; margin-top: 2px; }
+        .morning-group { display: flex; align-items: center; margin-bottom: 8px; }
+        .section-title { font-weight: bold; color: #2980b9; white-space: nowrap; }
+        .morning-input { flex: 1; min-width: 0; border: none; border-bottom: 1px dashed #aaa; background: transparent; font-size: 1rem; padding: 2px 5px; font-family: inherit; }
+        .morning-input:focus { outline: none; border-bottom: 1px solid #3498db; background-color: #f0f8ff; }
+        
+        .task-list { width: 100%; flex: 1; min-height: 350px; border: 1px dashed #ccc; padding: 8px; box-sizing: border-box; font-family: inherit; font-size: 1rem; line-height: 1.6; overflow-y: auto; background-color: white; }
+        .task-list:focus { outline: 2px solid #3498db; background-color: #f0f8ff; }
+
+        /* 右側面板包裝器 */
+        .side-wrapper { position: relative; display: flex; align-items: flex-start; }
+        .collapse-toggle { position: absolute; left: -22px; top: 15px; background: #2c3e50; color: white; border: none; width: 22px; height: 40px; border-radius: 5px 0 0 5px; cursor: pointer; z-index: 10; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; }
+        .collapse-toggle:hover { background: #34495e; }
+
+        /* 右側快捷面板 */
+        .side-panel { width: 220px; background: #fff; padding: 15px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); transition: width 0.3s ease, padding 0.3s ease, opacity 0.3s ease; overflow: hidden; }
+        .side-panel.collapsed { width: 0; padding-left: 0; padding-right: 0; opacity: 0; border: none; }
+
+        .tool-section { margin-bottom: 20px; }
+        .tool-section h3 { border-bottom: 2px solid #2c3e50; padding-bottom: 5px; margin-top: 0; font-size: 1rem; }
+        
+        /* 編輯器工具列 */
+        .editor-tools { display: flex; flex-wrap: nowrap; gap: 2px; margin-bottom: 10px; align-items: center; justify-content: space-between; }
+        .editor-tools button { border: 1px solid #ccc; background: #f9f9f9; cursor: pointer; border-radius: 3px; padding: 2px 5px; height: 26px; font-size: 0.9rem; flex-shrink: 0; }
+        .editor-tools select { border: 1px solid #ccc; background: #f9f9f9; cursor: pointer; border-radius: 3px; padding: 0 2px; height: 26px; font-size: 0.85rem; flex-shrink: 1; min-width: 50px; }
+        .editor-tools button:hover { background: #e0e0e0; }
+        
+        .color-group { display: flex; gap: 3px; width: 100%; margin-top: 5px; align-items: center; font-size: 0.8rem; flex-wrap: nowrap; }
+        .color-swatch { width: 18px; height: 18px; border-radius: 3px; border: 1px solid #aaa; cursor: pointer; display: inline-block; flex-shrink: 0; padding: 0; }
+        .color-swatch:hover { transform: scale(1.1); }
+        .clear-bg-btn { font-size: 0.75rem; padding: 0 4px; border: 1px solid #ccc; background: #fff; cursor: pointer; border-radius: 3px; white-space: nowrap; height: 18px; }
+        .custom-color-btn { position: relative; overflow: hidden; width: 18px; height: 18px; border-radius: 3px; border: 1px solid #aaa; cursor: pointer; background: conic-gradient(red, yellow, green, cyan, blue, magenta, red); display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; padding: 0; }
+        .custom-color-btn input { position: absolute; opacity: 0; width: 100%; height: 100%; cursor: pointer; padding: 0; margin: 0; }
+
+        .btn-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; margin-bottom: 10px; }
+        .quick-btn { background-color: #ecf0f1; border: 1px solid #bdc3c7; padding: 3px 0; border-radius: 4px; cursor: pointer; font-size: 0.9rem; text-align: center; width: 100%; box-sizing: border-box; }
+        .quick-btn:hover { background-color: #d5dbdb; }
+        
+        .delete-mode .quick-btn { background-color: #ffeaea; border-color: #e74c3c; color: #c0392b; position: relative; }
+        .delete-mode .quick-btn::after { content: '✖'; position: absolute; top: -6px; right: -4px; background: #e74c3c; color: white; border-radius: 50%; width: 14px; height: 14px; font-size: 10px; line-height: 14px; text-align: center; }
+        .toggle-delete-btn { width: 100%; background-color: #95a5a6; color: white; border: none; padding: 5px; border-radius: 4px; cursor: pointer; margin-bottom: 12px; font-size: 0.9rem; }
+        .toggle-delete-btn.active { background-color: #e74c3c; }
+
+        .add-custom { display: flex; gap: 5px; }
+        .add-custom input { flex: 1; padding: 3px; min-width: 0; font-size: 0.9rem; }
+        .add-custom button { background-color: #3498db; color: white; border: none; padding: 3px 6px; border-radius: 4px; cursor: pointer; }
+
+        .footer { text-align: center; margin-top: 20px; font-size: 0.9rem; color: #7f8c8d; padding-top: 10px; border-top: 1px dashed #ccc; }
+
+        /* 列印用樣式 */
+        #print-all-container { display: none; }
+        @media print {
+            @page { size: A4 landscape; margin: 10mm; }
+            body { background-color: white; padding: 0; }
+            .tabs-container, .side-wrapper, .header-section, .footer { display: none !important; }
+            body:not(.print-all-mode) .container { display: block; width: 100%; max-width: none; margin: 0; }
+            body.print-all-mode .container { display: none !important; }
+            body.print-all-mode #print-all-container { display: block; width: 100%; }
+            .main-panel, .print-panel { box-shadow: none; padding: 0; border: none; display: block; margin-bottom: 20px; }
+            .print-panel { page-break-after: always; }
+            .print-panel:last-child { page-break-after: auto; }
+            .days-container { display: flex; gap: 5px; }
+            .day-card { border: 1px solid #000; break-inside: avoid; background-color: white; flex: 1; min-width: 0; }
+            .task-list { border: none; overflow: hidden; height: auto; min-height: 400px; resize: none; background-color: white; }
+            .morning-input, .morning-print-div { border: none !important; border-bottom: 1px solid #000 !important; font-family: inherit; font-size: 1rem; width: 100%; display: block; min-height: 22px; }
+            
+            /* 修正頁首：顯示大標題與週次 */
+            .main-panel::before, .print-panel::before { 
+                content: "聯絡簿產生器\A" attr(data-print-title); 
+                white-space: pre-wrap; display: block; font-size: 1.5rem; font-weight: bold; text-align: center; margin-bottom: 15px; line-height: 1.4;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="tabs-container" id="tabs-container"></div>
+
+<div class="container">
+    <div class="main-panel" id="main-panel">
+        <div class="header-section">
+            <label>顯示天數：</label>
+            <select id="display-days" onchange="changeDisplayDays()">
+                <option value="1">1 天</option><option value="2">2 天</option><option value="3">3 天</option>
+                <option value="4">4 天</option><option value="5" selected>5 天</option>
+                <option value="6">6 天</option><option value="7">7 天</option>
+            </select>
+            
+            <label style="margin-left:10px;">週次名稱：</label>
+            <input type="text" id="week-name" style="width: 100px;" onchange="autoSave()">
+            
+            <label style="margin-left:10px;">起始日期：</label>
+            <input type="date" id="start-date" onchange="calculateDates()">
+        </div>
+        
+        <div class="days-container" id="days-container"></div>
+    </div>
+
+    <div class="side-wrapper">
+        <button class="collapse-toggle" id="collapse-btn" onclick="toggleSidePanel()">▶</button>
+        
+        <div class="side-panel" id="side-panel">
+            <button id="toggle-delete-btn" class="toggle-delete-btn" onclick="toggleDeleteMode()">✏️ 編輯/刪除按鈕</button>
+            
+            <div class="tool-section">
+                <h3>字體與顏色編輯</h3>
+                <div class="editor-tools">
+                    <button onmousedown="event.preventDefault();" onclick="execCmd('undo')" title="復原">↩️</button>
+                    <button onmousedown="event.preventDefault();" onclick="execCmd('redo')" title="重複">↪️</button>
+                    <button onmousedown="event.preventDefault();" onclick="execCmd('bold')" title="粗體"><b>B</b></button>
+                    <button onmousedown="event.preventDefault();" onclick="execCmd('italic')" title="斜體"><i>I</i></button>
+                    <button onmousedown="event.preventDefault();" onclick="execCmd('underline')" title="底線"><u>U</u></button>
+                    <select onmousedown="event.preventDefault();" onchange="execCmd('fontSize', this.value)" title="字體大小">
+                        <option value="2">小</option>
+                        <option value="3" selected>標準</option>
+                        <option value="4">加大</option>
+                        <option value="5">特大</option>
+                    </select>
+                </div>
+                <div class="color-group">
+                    文字：
+                    <button type="button" class="color-swatch" style="background:#000000;" onmousedown="event.preventDefault();" onclick="execCmd('foreColor', '#000000')" title="黑"></button>
+                    <button type="button" class="color-swatch" style="background:#e74c3c;" onmousedown="event.preventDefault();" onclick="execCmd('foreColor', '#e74c3c')" title="紅"></button>
+                    <button type="button" class="color-swatch" style="background:#2980b9;" onmousedown="event.preventDefault();" onclick="execCmd('foreColor', '#2980b9')" title="藍"></button>
+                    <button type="button" class="color-swatch" style="background:#27ae60;" onmousedown="event.preventDefault();" onclick="execCmd('foreColor', '#27ae60')" title="綠"></button>
+                    <label class="custom-color-btn" title="自訂顏色"><input type="color" onchange="execCmd('foreColor', this.value)"></label>
+                </div>
+                <div class="color-group">
+                    底色：
+                    <button type="button" class="color-swatch" style="background:#f1c40f;" onmousedown="event.preventDefault();" onclick="execCmd('backColor', '#f1c40f')" title="黃"></button>
+                    <button type="button" class="color-swatch" style="background:#2ecc71;" onmousedown="event.preventDefault();" onclick="execCmd('backColor', '#2ecc71')" title="綠"></button>
+                    <button type="button" class="color-swatch" style="background:#00ffff;" onmousedown="event.preventDefault();" onclick="execCmd('backColor', '#00ffff')" title="青"></button>
+                    <button type="button" class="clear-bg-btn" onmousedown="event.preventDefault();" onclick="execCmd('backColor', 'transparent')">無底色</button>
+                    <label class="custom-color-btn" title="自訂底色"><input type="color" onchange="execCmd('backColor', this.value)"></label>
+                </div>
+            </div>
+
+            <div class="tool-section">
+                <h3>動作選項</h3>
+                <div class="btn-grid" id="action-btns-container"></div>
+                <div class="add-custom">
+                    <input type="text" id="new-action" placeholder="例：背">
+                    <button onclick="addBtn('action')">新增</button>
+                </div>
+            </div>
+
+            <div class="tool-section">
+                <h3>作業項目</h3>
+                <div class="btn-grid" id="hw-btns-container"></div>
+                <div class="add-custom">
+                    <input type="text" id="new-hw" placeholder="例：造詞本">
+                    <button onclick="addBtn('hw')">新增</button>
+                </div>
+            </div>
+            
+            <div style="font-size: 0.8rem; color: #7f8c8d; line-height: 1.4; border-top: 1px dashed #ccc; padding-top: 10px;">
+                💡 <b>換行技巧：</b><br>按 <b>Shift+Enter</b> 可插入對齊好的空行。
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="print-all-container"></div>
+
+<div class="footer">
+    版權所有 &copy; 2026 聯絡簿產生器｜設計者：<b>LIFE師</b>
+</div>
+
+<input type="file" id="import-file" style="display:none" accept=".json" onchange="importData(event)">
+
+<script>
+    let appData = [];
+    let currentTabIndex = 0;
+    let displayDaysCount = 5;
+    const weekdayNames = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
+    
+    const holidays = {
+        "01-01": "元旦", "02-27": "和平紀念日補假", "02-28": "和平紀念日", "04-04": "兒童節", 
+        "04-05": "清明節", "05-01": "勞動節", "10-10": "國慶日"
+    };
+
+    let isPanelOpen = true;
+    function toggleSidePanel() {
+        const panel = document.getElementById('side-panel');
+        const btn = document.getElementById('collapse-btn');
+        isPanelOpen = !isPanelOpen;
+        if (isPanelOpen) { panel.classList.remove('collapsed'); btn.innerText = '▶'; } 
+        else { panel.classList.add('collapsed'); btn.innerText = '◀'; }
+    }
+
+    function execCmd(command, value = null) {
+        if(lastFocusedElement) { lastFocusedElement.focus(); }
+        document.execCommand(command, false, value);
+        autoSave();
+    }
+
+    let isDeleteMode = false;
+    const defaultActionBtns = ['考', '訂簽', '交', '帶', '()', 'P.', '、', '～', '❤️'];
+    const defaultHwBtns = ['國習', '國重', '數習', '數重', '生甲', '生乙', '社習', '社重', '預習單', '成造單', '聽寫', '國卷', '數卷', '社卷'];
+    let actionBtns = JSON.parse(localStorage.getItem('myActionBtns')) || defaultActionBtns;
+    let hwBtns = JSON.parse(localStorage.getItem('myHwBtns')) || defaultHwBtns;
+
+    window.onload = function() { loadData(); renderButtons(); };
+
+    function renderButtons() {
+        const actionContainer = document.getElementById('action-btns-container');
+        const hwContainer = document.getElementById('hw-btns-container');
+        
+        actionContainer.innerHTML = actionBtns.map((text, index) => 
+            `<button class="quick-btn" onclick="handleBtnClick('action', ${index})">${text}</button>`
+        ).join('');
+        
+        hwContainer.innerHTML = hwBtns.map((text, index) => 
+            `<button class="quick-btn" onclick="handleBtnClick('hw', ${index})">${text}</button>`
+        ).join('');
+
+        actionContainer.className = isDeleteMode ? "btn-grid delete-mode" : "btn-grid";
+        hwContainer.className = isDeleteMode ? "btn-grid delete-mode" : "btn-grid";
+    }
+
+    function toggleDeleteMode() {
+        isDeleteMode = !isDeleteMode;
+        const btn = document.getElementById('toggle-delete-btn');
+        btn.className = isDeleteMode ? "toggle-delete-btn active" : "toggle-delete-btn";
+        btn.innerText = isDeleteMode ? "✅ 完成刪除 (點擊退出)" : "✏️ 編輯/刪除按鈕";
+        renderButtons();
+    }
+
+    function handleBtnClick(type, index) {
+        if (isDeleteMode) {
+            if (type === 'action') { actionBtns.splice(index, 1); localStorage.setItem('myActionBtns', JSON.stringify(actionBtns)); } 
+            else { hwBtns.splice(index, 1); localStorage.setItem('myHwBtns', JSON.stringify(hwBtns)); }
+            renderButtons();
+        } else {
+            const text = type === 'action' ? actionBtns[index] : hwBtns[index];
+            insertText(text);
+        }
+    }
+
+    function addBtn(type) {
+        const inputId = type === 'action' ? 'new-action' : 'new-hw';
+        const val = document.getElementById(inputId).value.trim();
+        if (!val) return;
+        if (type === 'action') { actionBtns.push(val); localStorage.setItem('myActionBtns', JSON.stringify(actionBtns)); } 
+        else { hwBtns.push(val); localStorage.setItem('myHwBtns', JSON.stringify(hwBtns)); }
+        document.getElementById(inputId).value = '';
+        renderButtons();
+    }
+
+    function loadData() {
+        const savedData = localStorage.getItem('teacherContactBook');
+        if (savedData) {
+            appData = JSON.parse(savedData);
+        } else {
+            addNewWeekLogic();
+            return; 
+        }
+        renderTabs();
+        renderCurrentWeek();
+    }
+
+    function autoSave() {
+        if (appData.length === 0) return;
+        let week = appData[currentTabIndex];
+        week.weekName = document.getElementById('week-name').value;
+        week.startDate = document.getElementById('start-date').value;
+        
+        for (let i = 0; i < displayDaysCount; i++) {
+            const taskArea = document.getElementById(`day-content-${i}`);
+            const morningInput = document.getElementById(`morning-content-${i}`);
+            if (taskArea) week.contents[i] = taskArea.innerHTML; 
+            if (morningInput) week.morningContents[i] = morningInput.value;
+        }
+        localStorage.setItem('teacherContactBook', JSON.stringify(appData));
+        renderTabs();
+    }
+
+    function clearCurrentWeek() {
+        if(confirm('確定要清除本週所有的內容嗎？')) {
+            appData[currentTabIndex].contents = Array(7).fill("( ) 1. <br>( ) 2. <br>( ) 3. ");
+            appData[currentTabIndex].morningContents = Array(7).fill("");
+            renderCurrentWeek();
+            autoSave(); 
+        }
+    }
+
+    function deleteCurrentWeek() {
+        if(confirm('⚠️ 警告：確定要「刪除」這一整週嗎？刪除後無法復原！')) {
+            appData.splice(currentTabIndex, 1);
+            if(appData.length === 0) addNewWeekLogic();
+            else { currentTabIndex = Math.max(0, currentTabIndex - 1); autoSave(); renderTabs(); renderCurrentWeek(); }
+        }
+    }
+
+    function changeDisplayDays() {
+        displayDaysCount = parseInt(document.getElementById('display-days').value, 10);
+        renderCurrentWeek();
+    }
+
+    function renderTabs() {
+        const container = document.getElementById('tabs-container');
+        container.innerHTML = ''; 
+
+        const tabsDiv = document.createElement('div');
+        tabsDiv.style.display = 'flex'; tabsDiv.style.flexWrap = 'wrap'; tabsDiv.style.gap = '5px';
+        appData.forEach((week, index) => {
+            const btn = document.createElement('button');
+            btn.className = `tab-btn ${index === currentTabIndex ? 'active' : ''}`;
+            btn.innerText = week.weekName || `第 ${index + 1} 週`;
+            btn.onclick = () => switchTab(index);
+            tabsDiv.appendChild(btn);
+        });
+        container.appendChild(tabsDiv);
+
+        const exportGroup = document.createElement('div');
+        exportGroup.className = 'export-group';
+        
+        exportGroup.innerHTML = `
+            <button class="action-btn btn-blue" onclick="exportData()" title="下載備份檔">💾 備份</button>
+            <button class="action-btn btn-blue" onclick="document.getElementById('import-file').click()" title="載入備份檔">📂 載入</button>
+            <div style="width: 1px; height: 20px; background: #aaa; margin: 0 5px;"></div>
+            <button class="action-btn btn-orange" onclick="addNewWeekLogic()">➕ 新增一週</button>
+            <button class="action-btn btn-red" onclick="deleteCurrentWeek()">🗑️ 刪除此週</button>
+            <button class="action-btn btn-green" onclick="clearCurrentWeek()">🧹 清空內容</button>
+            <button class="export-btn" onclick="printPage()">🖨️ 列印/PDF</button>
+            <button class="export-btn" onclick="exportWord()" style="background:#2980b9;">📄 匯出Word</button>
+        `;
+        container.appendChild(exportGroup);
+    }
+
+    function switchTab(index) { autoSave(); currentTabIndex = index; renderTabs(); renderCurrentWeek(); }
+
+    function addNewWeekLogic() {
+        autoSave(); 
+        
+        let nextWeekName = "第 1 週";
+        let nextStartDate = "";
+        
+        if (appData.length > 0) {
+            let lastWeek = appData[appData.length - 1];
+            let match = lastWeek.weekName.match(/第\s*(\d+)\s*週/);
+            if (match) {
+                nextWeekName = `第 ${parseInt(match[1], 10) + 1} 週`;
+            } else {
+                nextWeekName = `第 ${appData.length + 1} 週`;
+            }
+            
+            if (lastWeek.startDate) {
+                let parts = lastWeek.startDate.split('-');
+                if(parts.length === 3) {
+                    let d = new Date(parts[0], parts[1] - 1, parts[2]);
+                    d.setDate(d.getDate() + 7);
+                    let yyyy = d.getFullYear();
+                    let mm = String(d.getMonth() + 1).padStart(2, '0');
+                    let dd = String(d.getDate()).padStart(2, '0');
+                    nextStartDate = `${yyyy}-${mm}-${dd}`;
+                }
+            }
+        }
+        
+        appData.push({
+            weekName: nextWeekName, startDate: nextStartDate,
+            morningContents: Array(7).fill(""),
+            contents: Array(7).fill("( ) 1. <br>( ) 2. <br>( ) 3. ")
+        });
+        currentTabIndex = appData.length - 1;
+        autoSave(); renderTabs(); renderCurrentWeek();
+    }
+
+    function renderCurrentWeek() {
+        const week = appData[currentTabIndex];
+        document.getElementById('week-name').value = week.weekName;
+        document.getElementById('start-date').value = week.startDate;
+        document.getElementById('display-days').value = displayDaysCount;
+        
+        // 將週次名稱寫入屬性，供列印使用
+        document.getElementById('main-panel').setAttribute('data-print-title', week.weekName);
+
+        const daysContainer = document.getElementById('days-container');
+        daysContainer.innerHTML = '';
+        
+        let startDateObj = null;
+        if (week.startDate) {
+            let parts = week.startDate.split('-');
+            if(parts.length === 3) startDateObj = new Date(parts[0], parts[1] - 1, parts[2]);
+        }
+
+        for (let i = 0; i < displayDaysCount; i++) {
+            let dateString = "請設定起始日"; let holidayString = "";
+            if (startDateObj) {
+                let currentDate = new Date(startDateObj);
+                currentDate.setDate(currentDate.getDate() + i);
+                let mm = String(currentDate.getMonth() + 1).padStart(2, '0');
+                let dd = String(currentDate.getDate()).padStart(2, '0');
+                let dayOfWeek = weekdayNames[currentDate.getDay()]; 
+                dateString = `${mm}月${dd}日 ${dayOfWeek}`;
+
+                let checkHoliday = `${mm}-${dd}`;
+                if (holidays[checkHoliday]) holidayString = `<span class="holiday-mark">(${holidays[checkHoliday]})</span>`;
+            }
+
+            let safeMorning = week.morningContents[i] || '';
+            let safeContent = week.contents[i] || '( ) 1. <br>( ) 2. <br>( ) 3. ';
+
+            const dayHTML = `
+                <div class="day-card">
+                    <div class="date-display" id="date-text-${i}">${dateString}${holidayString}</div>
+                    <div class="morning-group">
+                        <span class="section-title">早：</span>
+                        <input type="text" class="morning-input focus-target" id="morning-content-${i}" oninput="autoSave()" value="${safeMorning}">
+                    </div>
+                    <div class="task-list focus-target" id="day-content-${i}" contenteditable="true" oninput="autoSave()" onblur="autoSave()">${safeContent}</div>
+                </div>
+            `;
+            daysContainer.insertAdjacentHTML('beforeend', dayHTML);
+        }
+
+        document.querySelectorAll('.focus-target').forEach(elem => {
+            elem.addEventListener('focus', function() { lastFocusedElement = this; });
+            if(elem.hasAttribute('contenteditable')) elem.addEventListener('keydown', handleRichTextEnter);
+        });
+    }
+
+    function calculateDates() { autoSave(); renderCurrentWeek(); }
+
+    function handleRichTextEnter(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            const sel = window.getSelection();
+            const node = sel.focusNode;
+            
+            if (e.shiftKey) {
+                document.execCommand('insertHTML', false, '<br>　　');
+            } else {
+                const text = node.textContent;
+                const match = text.match(/^\s*\(\s*\)\s*(\d+)\.\s*/);
+                if (match) {
+                    const nextNum = parseInt(match[1], 10) + 1;
+                    document.execCommand('insertHTML', false, `<br>( ) ${nextNum}. `);
+                } else {
+                    document.execCommand('insertHTML', false, '<br>');
+                }
+            }
+        }
+    }
+
+    let lastFocusedElement = null;
+
+    function insertText(text) {
+        if (!lastFocusedElement) return alert('請先點選左側要輸入的欄位喔！');
+        lastFocusedElement.focus();
+        
+        if (lastFocusedElement.tagName === 'INPUT') {
+            const start = lastFocusedElement.selectionStart;
+            const end = lastFocusedElement.selectionEnd;
+            const value = lastFocusedElement.value;
+            lastFocusedElement.value = value.substring(0, start) + text + value.substring(end);
+            lastFocusedElement.selectionStart = lastFocusedElement.selectionEnd = start + text.length;
+        } else if (lastFocusedElement.hasAttribute('contenteditable')) {
+            document.execCommand('insertHTML', false, text);
+        }
+        autoSave(); 
+    }
+
+    function exportData() {
+        autoSave();
+        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(appData));
+        const downloadAnchorNode = document.createElement('a');
+        downloadAnchorNode.setAttribute("href", dataStr);
+        downloadAnchorNode.setAttribute("download", "LIFE師聯絡簿備份.json");
+        document.body.appendChild(downloadAnchorNode);
+        downloadAnchorNode.click();
+        downloadAnchorNode.remove();
+    }
+
+    function importData(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                const importedData = JSON.parse(e.target.result);
+                if(Array.isArray(importedData)){
+                    appData = importedData;
+                    localStorage.setItem('teacherContactBook', JSON.stringify(appData));
+                    currentTabIndex = 0;
+                    renderTabs(); renderCurrentWeek();
+                    alert("✅ 資料載入成功！");
+                } else { throw new Error("Format Error"); }
+            } catch (err) { alert("❌ 檔案格式錯誤，載入失敗！"); }
+            event.target.value = ''; 
+        };
+        reader.readAsText(file);
+    }
+
+    function printPage() { 
+        autoSave();
+        let doPrintAll = confirm("按【確定】列印或匯出「所有週次」\n\n按【取消】僅列印「當前頁面 (本週)」");
+        
+        if (doPrintAll) {
+            document.body.classList.add('print-all-mode');
+            let container = document.getElementById('print-all-container');
+            container.innerHTML = '';
+            
+            appData.forEach((week) => {
+                let html = generatePrintHtmlForWeek(week);
+                container.innerHTML += html;
+            });
+            window.print();
+            document.body.classList.remove('print-all-mode');
+        } else {
+            window.print(); 
+        }
+    }
+
+    function generatePrintHtmlForWeek(week) {
+        let startDateObj = null;
+        if (week.startDate) {
+            let parts = week.startDate.split('-');
+            if(parts.length === 3) startDateObj = new Date(parts[0], parts[1] - 1, parts[2]);
+        }
+        
+        let daysHtml = '';
+        for (let i = 0; i < displayDaysCount; i++) {
+            let dateString = "請設定起始日"; let holidayString = "";
+            if (startDateObj) {
+                let d = new Date(startDateObj); d.setDate(d.getDate() + i);
+                let mm = String(d.getMonth()+1).padStart(2,'0');
+                let dd = String(d.getDate()).padStart(2,'0');
+                dateString = `${mm}月${dd}日 ${weekdayNames[d.getDay()]}`;
+                let checkHoliday = `${mm}-${dd}`;
+                if (holidays[checkHoliday]) holidayString = `<span class="holiday-mark">(${holidays[checkHoliday]})</span>`;
+            }
+            let safeMorning = week.morningContents[i] || '';
+            let safeContent = week.contents[i] || '( ) 1. <br>( ) 2. <br>( ) 3. ';
+            
+            daysHtml += `
+                <div class="day-card">
+                    <div class="date-display">${dateString}${holidayString}</div>
+                    <div class="morning-group">
+                        <span class="section-title">早：</span>
+                        <div class="morning-print-div">${safeMorning}</div>
+                    </div>
+                    <div class="task-list" style="border:none;">${safeContent}</div>
+                </div>
+            `;
+        }
+        return `
+            <div class="print-panel" data-print-title="${week.weekName}">
+                <div class="days-container">${daysHtml}</div>
+            </div>
+        `;
+    }
+
+    function exportWord() {
+        autoSave();
+        let exportAll = confirm("按【確定】匯出「所有週次」至Word\n\n按【取消】僅匯出「當前頁面 (本週)」");
+        let weeksToExport = exportAll ? appData : [appData[currentTabIndex]];
+        
+        let html = `<html xmlns:w="urn:schemas-microsoft-com:office:word"><head><meta charset="utf-8"><title>聯絡簿</title></head><body>`;
+        
+        weeksToExport.forEach((week, index) => {
+            html += `<h2 style="text-align:center;">聯絡簿產生器</h2>`;
+            html += `<h3 style="text-align:center;">${week.weekName}</h3>`;
+            html += `<table border="1" style="width:100%; border-collapse:collapse; text-align:left;" cellpadding="10"><tr>`;
+            
+            let startDateObj = null;
+            if (week.startDate) {
+                let parts = week.startDate.split('-');
+                if(parts.length === 3) startDateObj = new Date(parts[0], parts[1] - 1, parts[2]);
+            }
+
+            for (let i = 0; i < displayDaysCount; i++) {
+                let dateText = "請設定起始日";
+                if(startDateObj) {
+                    let d = new Date(startDateObj); d.setDate(d.getDate() + i);
+                    let mm = String(d.getMonth()+1).padStart(2,'0');
+                    let dd = String(d.getDate()).padStart(2,'0');
+                    dateText = `${mm}月${dd}日 ${weekdayNames[d.getDay()]}`;
+                }
+                html += `<th style="background-color:#f2f2f2; width:${100/displayDaysCount}%;">${dateText}</th>`;
+            }
+            html += `</tr><tr>`;
+            for (let i = 0; i < displayDaysCount; i++) {
+                let morning = week.morningContents[i] || '';
+                let content = week.contents[i] || '';
+                html += `<td style="vertical-align:top;"><p><b>早自習：</b>${morning}</p><div>${content}</div></td>`;
+            }
+            html += `</tr></table>`;
+            
+            if(index < weeksToExport.length - 1) {
+                html += `<br clear=all style='mso-special-character:line-break;page-break-before:always'>`;
+            }
+        });
+        html += `</body></html>`;
+        
+        const source = 'data:application/vnd.ms-word;charset=utf-8,' + encodeURIComponent(html);
+        const fileDownload = document.createElement("a");
+        document.body.appendChild(fileDownload);
+        fileDownload.href = source;
+        fileDownload.download = exportAll ? `聯絡簿_全部週次.doc` : `${weeksToExport[0].weekName}_聯絡簿.doc`;
+        fileDownload.click();
+        document.body.removeChild(fileDownload);
+    }
+</script>
+
+</body>
+</html>
